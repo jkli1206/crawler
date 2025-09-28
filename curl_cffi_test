@@ -1,0 +1,17 @@
+#下载测试网页
+from curl_cffi import requests
+#测试网址
+url = "https://www.linkedin.com/jobs/view/senior-marketing-program-manager-at-cradlepoint-part-of-ericsson-3976921349?position=6&pageNum=21&refId=NCri2D5jLl2A4oTR25VJgw%3D%3D&trackingId=yD2YHDRX0Fyk%2Bxg89CzA2w%3D%3D&trk=public_jobs_jserp-result_search-card&lg=en&_l=en"
+#代理,换成自己的代理号
+proxies = {
+    'http': "http://127.0.0.1:7890",
+    'https': "http://127.0.0.1:7890",
+}
+
+res = requests.get(url, proxies=proxies, impersonate="chrome")
+
+print(res.status_code)
+with open("test3.html", "w", encoding="utf-8") as f:
+    f.write(res.text)
+
+print("内容写入完毕")
