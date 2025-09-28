@@ -1,0 +1,65 @@
+import asyncio
+import time
+
+from playwright.async_api import async_playwright
+
+
+from crawler_platform.common.settings import settings
+
+# Playwright 的 CDP 地址
+SBR_WS_CDP = settings.playwright_for_env()
+
+
+async def run(pw):
+    print('Connecting to Scraping Browser...')
+    browser = await pw.chromium.connect_over_cdp(SBR_WS_CDP)
+    try:
+        print('Connected! Navigating...')
+        page = await browser.new_page()
+        await page.goto('https://www.walmart.ca', timeout=2 * 60 * 1000)
+        await page.fill('input[aria-label="Search"]', 'dress')
+        await page.keyboard.press("Enter")
+
+        # 等待搜索结果加载
+        await page.wait_for_load_state("networkidle", timeout=60 * 1000)
+
+        print('Taking page screenshot to file walmart.png')
+        await page.screenshot(path="walmart.png")
+
+        # 获取前几个商品标题
+        product_links = page.locator('a.product-link')
+        count = await product_links.count()
+        print(f"找到商品数: {count}")
+
+        for i in range(min(10, count)):
+            title = await product_links.nth(i).inner_text()
+            print(f"{i + 1}. {title.strip()}")
+
+        # 发送CDP命令
+        cdp_session = await page.context.new_cdp_session(page)
+        res = await cdp_session.send("Captchas.automaticSolver", {
+            "timeout": 120000,
+            "solverType": "cloudflare"
+            #"solverType": "google-v2"
+            #"solverType": "datadome"
+        })
+
+        print(f'验证码处理结果:{res}')
+
+        print(f"网站标题为：{page.url}")
+
+
+        print('Navigated! Scraping page content...')
+
+    finally:
+        time.sleep(5)
+        await browser.close()
+
+
+async def main():
+    async with async_playwright() as playwright:
+        await run(playwright)
+
+if __name__ == '__main__':
+
+    asyncio.run(main())
